@@ -133,7 +133,7 @@ class MediaClassifyActivity : BasePluginActivity() {
         }
 
         //如果传入分类，则直接开始加载分类数据，否则自动加载分类项数据并打开弹窗
-        getAction<ClassifyAction>()?.also {
+        consumeAction<ClassifyAction>()?.also {
             mediaClassify.currentClassifyAction = it
             viewModel.getClassifyData(it)
         } ?: viewModel.getClassifyItemData()

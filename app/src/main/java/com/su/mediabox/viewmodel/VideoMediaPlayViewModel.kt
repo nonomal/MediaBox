@@ -19,6 +19,7 @@ import com.su.mediabox.view.activity.VideoMediaPlayActivity
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.min
 import kotlin.properties.Delegates
@@ -60,6 +61,8 @@ class VideoMediaPlayViewModel : ViewModel() {
         }
 
     private val episode2VideoInfoMap = mutableMapOf<String, VideoPlayMedia>()
+
+    private var lastAutoJob: Job? = null
 
     fun init(playList: List<EpisodeData>) {
         this.playList = playList
@@ -107,7 +110,8 @@ class VideoMediaPlayViewModel : ViewModel() {
             return
         playList?.let {
             logD("preloadVideo", "load start: cur=$curEpisodeUrl")
-            viewModelScope.launch(Dispatchers.IO) {
+            lastAutoJob?.cancel()
+            lastAutoJob = viewModelScope.launch(Dispatchers.IO) {
                 //定位当前
                 val startPre = it.indexOfFirst { it.url == curEpisodeUrl }
                 if (startPre != -1) {

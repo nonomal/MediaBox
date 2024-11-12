@@ -174,7 +174,7 @@ class ViewPagerViewHolder private constructor(private val binding: ViewComponent
             page?.also { this.page = it }
         }
 
-        private val _pageDataLiveData: MutableLiveData<List<BaseData>> = MutableLiveData()
+        private val _pageDataLiveData: MutableLiveData<List<BaseData>?> = MutableLiveData()
         val pageDataLiveData = _pageDataLiveData.toLiveData()
 
         fun getData() {

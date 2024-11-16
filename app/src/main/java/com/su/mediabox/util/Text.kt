@@ -29,5 +29,7 @@ object Text {
     /**
      * Github代理
      */
-    val String.githubProxy: String get() = if (contains("github") && Pref.isProxyPluginRepo.value) "https://ghproxy.com/$this" else this
+    val String.githubProxy: String get() = if (contains("github") && Pref.isProxyPluginRepo.value) "https://mirror.ghproxy.com/$this" else this
+
+    fun String?.ifBlank(block: () -> String) = if (isNullOrBlank()) block() else this
 }

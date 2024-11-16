@@ -1,21 +1,25 @@
 package com.su.mediabox.util.update
 
-import android.text.Html
+import android.app.Activity
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.lifecycleScope
 import com.afollestad.materialdialogs.MaterialDialog
 import com.afollestad.materialdialogs.WhichButton
 import com.afollestad.materialdialogs.actions.getActionButton
+import com.su.mediabox.Pref
 import com.su.mediabox.R
 import com.su.mediabox.config.Const
 import com.su.mediabox.model.AppUpdateModel
-import com.su.mediabox.util.Text.githubProxy
-import com.su.mediabox.util.Util
+import com.su.mediabox.net.RetrofitManager
+import com.su.mediabox.net.service.AppService
 import com.su.mediabox.util.Util.openBrowser
+import com.su.mediabox.util.appCoroutineScope
 import com.su.mediabox.util.formatSize
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.lang.Exception
 import java.text.SimpleDateFormat
 import java.util.*
@@ -42,6 +46,31 @@ class AppUpdateHelper private constructor() {
 
     fun checkUpdate() {
         AppUpdateModel.checkUpdate()
+    }
+
+    fun checkDebugUpdate(activity: Activity) {
+        appCoroutineScope.launch(Dispatchers.Main) {
+            val request = RetrofitManager.get().create(AppService::class.java)
+            for (it in withContext(Dispatchers.IO) { request.getReleases() }) {
+                if (it.tagName.lowercase().contains("debug")) {
+                    Pref.debugVersionUpdateId.apply {
+                        if (it.url != value) {
+                            if (value.isNotBlank())
+                                MaterialDialog(activity)
+                                    .cancelable(true)
+                                    .title(R.string.exist_new_debug_version)
+                                    .message(text = it.body)
+                                    .positiveButton(res = R.string.go_update_download) {
+                                        openBrowser("${Const.Common.GITHUB_PLUGIN_REPO_OFFICE_URL}download")
+                                    }
+                                    .show {}
+                            saveData(it.url)
+                        }
+                    }
+                    break
+                }
+            }
+        }
     }
 
     fun noticeUpdate(activity: AppCompatActivity) {

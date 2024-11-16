@@ -7,7 +7,7 @@ import androidx.lifecycle.lifecycleScope
 import com.microsoft.appcenter.analytics.Analytics
 import com.su.mediabox.R
 import com.su.mediabox.databinding.ActivityMediaClassifyBinding
-import com.su.mediabox.lifecycleCollect
+import com.su.mediabox.util.lifecycleCollect
 import com.su.mediabox.pluginapi.action.ClassifyAction
 import com.su.mediabox.util.*
 import com.su.mediabox.viewmodel.MediaClassifyViewModel
@@ -128,11 +128,12 @@ class MediaClassifyActivity : BasePluginActivity() {
                     mBinding.mediaClassifyFabProgress.invisible()
                     "加载分类错误：${it.throwable?.message}".showToast()
                 }
+                else -> {}
             }
         }
 
         //如果传入分类，则直接开始加载分类数据，否则自动加载分类项数据并打开弹窗
-        getAction<ClassifyAction>()?.also {
+        consumeAction<ClassifyAction>()?.also {
             mediaClassify.currentClassifyAction = it
             viewModel.getClassifyData(it)
         } ?: viewModel.getClassifyItemData()

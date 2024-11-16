@@ -31,7 +31,8 @@ interface Const {
                 "https://ryensx.github.io/MediaBoxPluginRepository/"
             const val GITHUB_PLUGIN_REPO_DEV_DOC_URL = "https://github.com/RyensX/MediaBox/wiki"
             const val USER_NOTICE_VERSION = 2
-            const val TG_URL = "https://t.me/MediaBoxGithub"
+            const val GROUP_URL = "https://pd.qq.com/s/1cii5y637"
+            const val ANNOUNCEMENT="https://raw.githubusercontent.com/RyensX/MediaBox/dev/doc/announcement.json"
 
             val licenses = listOf(
                 License("", "名称", "许可证", true),
@@ -82,6 +83,11 @@ interface Setting {
         const val COMMONLY_USED_VIDEO_SPEED = "commonly_used_video_speed"
         const val DANMAKU_SEND_COLOR = "danmaku_send_color"
         const val COMBINE_SEARCH_IGNORE_PLUGINS = "combine_search_ignore_plugins"
+        const val DANMAKU_TEXT_SCALE_PERCENT = "danmaku_text_scale_percent"
+        const val DANMAKU_TOP_DISPLAY_AREA_MODE = "danmaku_top_display_area_mode"
+        const val DEBUG_VERSION = "debug_version"
+        const val ANNOUNCEMENT = "announcement"
+        const val VIDEO_PRELOAD = "video_preload"
     }
 }
 
@@ -97,6 +103,7 @@ interface Database {
     object OfflineDataBase {
         const val PLAY_RECORD_TABLE_NAME = "playRecord"
         const val UPDATE_RECORD_TABLE_NAME = "mediaUpdateRecord"
+        const val SKIP_POS_RECORD_TABLE_NAME = "skipPosRecord"
     }
 }
 

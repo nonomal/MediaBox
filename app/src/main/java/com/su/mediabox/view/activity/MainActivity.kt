@@ -10,11 +10,13 @@ import android.text.Html
 import androidx.activity.viewModels
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.afollestad.materialdialogs.MaterialDialog
 import com.afollestad.materialdialogs.WhichButton
 import com.microsoft.appcenter.analytics.Analytics
+import com.su.mediabox.BuildConfig
 import com.su.mediabox.Pref
 import com.su.mediabox.R
 import com.su.mediabox.config.Const
@@ -50,6 +52,7 @@ class MainActivity : BaseActivity() {
     override fun onResume() {
         PluginManager.initPluginEnv()
         super.onResume()
+        checkAnnouncement(this, lifecycleScope)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,7 +81,13 @@ class MainActivity : BaseActivity() {
         }
 
         //检测更新
-        AppUpdateHelper.instance.checkUpdate()
+        if (BuildConfig.DEBUG) {
+            //测试版通道
+            AppUpdateHelper.instance.checkDebugUpdate(this)
+        } else {
+            //正式版通道
+            AppUpdateHelper.instance.checkUpdate()
+        }
 
         //使用须知
         if (Util.lastReadUserNoticeVersion() < Const.Common.USER_NOTICE_VERSION) {

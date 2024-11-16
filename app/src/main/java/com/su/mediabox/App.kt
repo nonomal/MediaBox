@@ -3,6 +3,8 @@ package com.su.mediabox
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.webkit.WebView
 import com.liulishuo.filedownloader.FileDownloader
@@ -12,7 +14,7 @@ import com.microsoft.appcenter.crashes.Crashes
 import com.scwang.smart.refresh.footer.BallPulseFooter
 import com.scwang.smart.refresh.header.MaterialHeader
 import com.scwang.smart.refresh.layout.SmartRefreshLayout
-import com.su.appcrashhandler.AppCatchException
+import com.su.mediabox.util.crash.AppCatchException
 import com.su.mediabox.plugin.AppAction
 import com.su.mediabox.plugin.PluginManager
 import com.su.mediabox.plugin.PluginPreferenceImpl
@@ -83,6 +85,7 @@ class App : Application() {
     companion object {
         @SuppressLint("StaticFieldLeak")
         lateinit var context: Context
+        val mainHandler = Handler(Looper.getMainLooper())
 
         init {
             // 防止内存泄漏

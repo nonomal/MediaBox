@@ -13,7 +13,6 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.work.WorkManager
 import com.afollestad.materialdialogs.MaterialDialog
-import com.afollestad.materialdialogs.WhichButton
 import com.shuyu.gsyvideoplayer.player.IjkPlayerManager
 import com.su.mediabox.*
 import com.su.mediabox.config.Const
@@ -22,6 +21,7 @@ import com.su.mediabox.util.*
 import com.su.mediabox.util.update.AppUpdateHelper
 import com.su.mediabox.util.update.AppUpdateStatus
 import com.su.mediabox.view.activity.LicenseActivity
+import com.su.mediabox.view.preference.*
 import com.su.mediabox.work.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,7 +30,7 @@ import tv.danmaku.ijk.media.exo2.Exo2PlayerManager
 class SettingsPageFragment : PreferenceFragmentCompat(), Preference.OnPreferenceClickListener {
 
     private lateinit var nowCheckMediaUpdatePreference: Preference
-    private val appHandler = Handler(Looper.getMainLooper())
+    private var updateDebugVerifyCount = 0
 
     override fun onResume() {
         super.onResume()
@@ -80,14 +80,13 @@ class SettingsPageFragment : PreferenceFragmentCompat(), Preference.OnPreference
                     titleRes(R.string.chat_group_title)
                     summaryRes(R.string.chat_group_summary)
                     onPreferenceClickListener = Preference.OnPreferenceClickListener {
-                        Util.openBrowser(Const.Common.TG_URL)
+                        Util.openBrowser(Const.Common.GROUP_URL)
                         true
                     }
                 }
             }
 
             preferenceCategory {
-
                 titleRes(R.string.net_category_title)
                 switchPreference {
                     key = Const.Setting.NET_REPO_PROXY
@@ -134,7 +133,7 @@ class SettingsPageFragment : PreferenceFragmentCompat(), Preference.OnPreference
                         //launchMediaUpdateCheckWorker(ExistingPeriodicWorkPolicy.REPLACE)
                         WorkManager.getInstance(App.context)
                             .cancelUniqueWork(MEDIA_UPDATE_CHECK_WORKER_ID)
-                        appHandler.post {
+                        listView.post {
                             auto.isChecked = false
                         }
                         true
@@ -147,7 +146,7 @@ class SettingsPageFragment : PreferenceFragmentCompat(), Preference.OnPreference
                     titleRes(R.string.media_update_check_pref_on_metered_net_title)
                     summaryRes(R.string.media_update_check_pref_on_metered_net_summary)
                     setOnPreferenceClickListener {
-                        appHandler.post {
+                        listView.post {
                             auto.isChecked = false
                         }
                         true
@@ -171,7 +170,7 @@ class SettingsPageFragment : PreferenceFragmentCompat(), Preference.OnPreference
                 }
 
                 lifecycleCollect(mediaUpdateCheckWorkerIsRunning) { isRunning ->
-                    appHandler.post {
+                    App.mainHandler.post {
                         auto.isEnabled = !isRunning
                         interval.isEnabled = !isRunning
                         onMeteredNet.isEnabled = !isRunning
@@ -191,7 +190,7 @@ class SettingsPageFragment : PreferenceFragmentCompat(), Preference.OnPreference
                     summaryRes(R.string.player_bottom_progress_summary)
 
                     lifecycleCollect(Pref.isShowPlayerBottomProgressBar) {
-                        appHandler.post {
+                        App.mainHandler.post {
                             isChecked = it
                         }
                     }
@@ -216,6 +215,13 @@ class SettingsPageFragment : PreferenceFragmentCompat(), Preference.OnPreference
                     setIcon(R.drawable.ic_baseline_core_24)
                     titleRes(R.string.player_default_core_title)
                 }
+
+                switchPreference {
+                    key = Const.Setting.VIDEO_PRELOAD
+                    setDefaultValue(Pref.videoPreload.value)
+                    titleRes(R.string.pref_video_preload_title)
+                    summaryRes(R.string.pref_video_preload_summary)
+                }
             }
 
             preferenceCategory {
@@ -227,12 +233,16 @@ class SettingsPageFragment : PreferenceFragmentCompat(), Preference.OnPreference
                     AppUpdateHelper.instance.apply {
                         getUpdateStatus()
                             .observe(this@SettingsPageFragment) {
-                                isEnabled = it != AppUpdateStatus.CHECKING
-                                when (it) {
-                                    AppUpdateStatus.VALID ->
-                                        context.getString(R.string.app_no_update_hint).showToast()
-                                    AppUpdateStatus.DATED -> noticeUpdate(requireActivity() as AppCompatActivity)
-                                    else -> Unit
+                                App.mainHandler.post {
+                                    isEnabled = it != AppUpdateStatus.CHECKING
+                                    when (it) {
+                                        AppUpdateStatus.VALID ->
+                                            context.getString(R.string.app_no_update_hint)
+                                                .showToast()
+
+                                        AppUpdateStatus.DATED -> noticeUpdate(requireActivity() as AppCompatActivity)
+                                        else -> Unit
+                                    }
                                 }
                             }
                     }
@@ -248,7 +258,12 @@ class SettingsPageFragment : PreferenceFragmentCompat(), Preference.OnPreference
                         )
 
                         setOnPreferenceClickListener {
-                            AppUpdateHelper.instance.checkUpdate()
+                            if (updateDebugVerifyCount > 16)
+                                AppUpdateHelper.instance.noticeUpdate(requireActivity() as AppCompatActivity)
+                            else {
+                                updateDebugVerifyCount++
+                                AppUpdateHelper.instance.checkUpdate()
+                            }
                             true
                         }
                     }

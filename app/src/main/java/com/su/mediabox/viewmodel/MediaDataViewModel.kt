@@ -2,10 +2,12 @@ package com.su.mediabox.viewmodel
 
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.su.mediabox.App
 import com.su.mediabox.R
+import com.su.mediabox.bean.MediaFavorite
 import com.su.mediabox.database.getAppDataBase
 import com.su.mediabox.database.getOfflineDatabase
 import com.su.mediabox.plugin.MediaUpdateCheck
@@ -17,8 +19,25 @@ import kotlinx.coroutines.flow.*
 
 class MediaDataViewModel : ViewModel() {
 
-    val favorite = getAppDataBase().favoriteDao().getFavoriteListLiveData()
+    private var filterNameFlow = MutableStateFlow("")
+    var filterCount = 0
+        private set
+    private val favoriteFlow = getAppDataBase().favoriteDao().getFavoriteListLiveData().asFlow()
+
+    //同时关注数据库数据和过滤名称
+    val favorite = favoriteFlow.combine(filterNameFlow) { data, filter ->
+        val result =
+            if (filter.isNotBlank()) data.filter { it.mediaTitle.contains(filter) } else data
+        result.also {
+            //统计
+            filterCount = data.size - it.size
+        }
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val history = getAppDataBase().historyDao().getHistoryListLiveData()
+
 
     val mediaUpdateDataComponent =
         Util.withoutExceptionGet { PluginManager.acquireComponent<IMediaUpdateDataComponent>() }
@@ -43,22 +62,32 @@ class MediaDataViewModel : ViewModel() {
         mediaUpdateDataComponent ?: return
         if (_updateCount.value != 0) return
 
-        favorite.value?.also {
+        favorite.value.also {
             PluginManager.currentLaunchPlugin.value?.also { plugin ->
                 viewModelScope.launch(updateDispatcher) {
-                    MediaUpdateCheck.checkMediaUpdate(it, plugin, mediaUpdateDataComponent, {
-                        _updateCount.apply { value += 1 }
-                    }, {
-                        _updateCount.apply { value -= 1 }
-                    }) {
-                        if (it.isNotEmpty())
-                            launch(Dispatchers.Main) {
-                                App.context.getString(R.string.media_update_toast, it.size)
-                                    .showToast(Toast.LENGTH_LONG)
-                            }
-                        _updateCount.value = 0
-                    }
+                    if (it != null)
+                        MediaUpdateCheck.checkMediaUpdate(it, plugin, mediaUpdateDataComponent, {
+                            _updateCount.apply { value += 1 }
+                        }, {
+                            _updateCount.apply { value -= 1 }
+                        }) {
+                            if (it.isNotEmpty())
+                                launch(Dispatchers.Main) {
+                                    App.context.getString(R.string.media_update_toast, it.size)
+                                        .showToast(Toast.LENGTH_LONG)
+                                }
+                            _updateCount.value = 0
+                        }
                 }
+            }
+        }
+    }
+
+    fun filter(name: String?) {
+        name?.also {
+            val nameTrim = it.trim()
+            if (nameTrim != filterNameFlow.value) {
+                filterNameFlow.value = nameTrim
             }
         }
     }

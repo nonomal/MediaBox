@@ -36,8 +36,8 @@ class VideoMediaPlayActivity : BasePluginActivity(),
     VideoMediaPlayer.PlayOperatingProxy {
 
     companion object {
-        var playList: List<EpisodeData>? = null
         private const val DEFAULT_SEEK_LENGTH = 15000L
+        const val DEFAULT_VIDEO_PRELOAD_SIZE = 5
     }
 
     private val mBinding by viewBind(ActivityVideoMediaPlayBinding::inflate)
@@ -62,10 +62,12 @@ class VideoMediaPlayActivity : BasePluginActivity(),
 
         setFullScreen(window)
 
-        getAction<PlayAction>()?.also { action ->
+        consumeAction<PlayAction>()?.also { action ->
             this.action = action
             init()
             viewModel.apply {
+                val playList = action.extraData as? List<EpisodeData>
+                playList?.let { init(it) }
                 detailPartUrl = action.detailPartUrl
                 coverUrl = action.coverUrl
                 videoName = action.videoName
@@ -84,6 +86,7 @@ class VideoMediaPlayActivity : BasePluginActivity(),
                                 }
                                 visible()
                             }
+
                         is DataState.Success -> dataState.data?.also {
                             mBinding.vmPlay.playVideo(
                                 it.videoPlayUrl,
@@ -92,6 +95,7 @@ class VideoMediaPlayActivity : BasePluginActivity(),
                             mBinding.vmLoadingLayer.gone()
                             mBinding.vmErrorRetry.gone()
                         }
+
                         is DataState.Failed -> {
                             dataState.throwable?.message?.showToast()
                             mBinding.vmLoadingLayer.apply {
@@ -101,6 +105,7 @@ class VideoMediaPlayActivity : BasePluginActivity(),
                                 visible()
                             }
                         }
+
                         else -> Unit
                     }
                 }
@@ -125,7 +130,7 @@ class VideoMediaPlayActivity : BasePluginActivity(),
         if (viewModel.currentVideoPlayMedia.value is DataState.Failed && mBinding.vmLoadingLayer.isVisible)
             when (mBinding.vmPlay.currentState) {
                 //在已有正常播放时解析失败返回则只是关闭解析提示层
-                GSYVideoView.CURRENT_STATE_PLAYING, GSYVideoView.CURRENT_STATE_PAUSE -> mBinding.vmLoadingLayer.gone()
+                CURRENT_STATE_PLAYING, GSYVideoView.CURRENT_STATE_PAUSE -> mBinding.vmLoadingLayer.gone()
                 else -> super.onBackPressed()
             }
         else
@@ -139,18 +144,18 @@ class VideoMediaPlayActivity : BasePluginActivity(),
             playPositionMemoryStore = VideoPositionMemoryDbStore
             //设置旋转
             orientationUtils = OrientationUtils(this@VideoMediaPlayActivity, this).apply {
-                isRotateWithSystem = false
+                isRotateWithSystem = !action.autoRotate
                 if (screenType != ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
                     resolveByClick()
                 setLockClickListener { _, lock ->
-                    isRotateWithSystem = lock
+                    isRotateWithSystem = lock || !action.autoRotate
                 }
             }
 
             ivDownloadButton?.gone()
             fullscreenButton.gone()
             //是否开启自动旋转
-            isRotateViewAuto = false
+            isRotateViewAuto = action.autoRotate
             //是否需要全屏锁定屏幕功能
             isIfCurrentIsFullscreen = true
             isNeedLockFull = true
@@ -210,6 +215,7 @@ class VideoMediaPlayActivity : BasePluginActivity(),
                         onVideoResume()
                     }
                 }
+
                 KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_STEP_BACKWARD ->
                     //减速
                     if (event?.isShiftPressed == true) {
@@ -269,8 +275,6 @@ class VideoMediaPlayActivity : BasePluginActivity(),
             mBinding.vmPlay.setVideoAllCallBack(null)
             GSYVideoManager.releaseAllVideos()
             orientationUtils.releaseListener()
-            //释放播放列表
-            playList = null
         }
         super.onDestroy()
     }
